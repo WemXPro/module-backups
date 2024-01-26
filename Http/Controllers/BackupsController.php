@@ -16,6 +16,8 @@ class BackupsController extends Controller
     {
         $this->files_path = settings('backups::path', dirname(base_path()) . '/backups/wemx');
         $this->db_path = $this->files_path . '/db';
+        if(file_exists($this->files_path) === false) mkdir($this->files_path, 0777, true);
+        if(file_exists($this->db_path) === false) mkdir($this->db_path, 0777, true);
     }
 
     public function index()

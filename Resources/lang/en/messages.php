@@ -1,5 +1,26 @@
 <?php
 
 return [
-    'actions_timer' => 'All actions are performed with a delay of 10 to 60 seconds. Please wait.',
+    'backups' => 'Backups',
+    'create_backup' => 'Create Backup',
+    'settings' => 'Settings',
+    'logs' => 'Logs',
+    'name' => 'Name',
+    'path' => 'Path',
+    'size' => 'Size',
+    'date' => 'Date',
+    'files' => 'Files',
+    'download' => 'Download',
+    'delete' => 'Delete',
+    'database' => 'Database',
+    'confirm_delete' => 'Are you sure you want to delete the backup?',
+    'save_path' => 'Save Path',
+    'save_count' => 'Save Count',
+    'save' => 'Save',
+    'every_hours' => 'How often to create a backup in hours (every :hours hours)',
+    'clear_logs' => 'Clear all logs',
+    'clear_logs_start' => 'The log cleaning process has started. Wait 10-60 seconds.',
+    'settings_saved' => 'Settings saved successfully',
+    'create_backup_start' => 'The backup creation process has started. Wait seconds.',
+    'delete_backup_start' => 'The backup deletion process has started. Wait 10-60 seconds.',
 ];

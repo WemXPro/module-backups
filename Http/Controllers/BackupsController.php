@@ -30,7 +30,7 @@ class BackupsController extends Controller
     public function clearLogs()
     {
         Artisan::queue('backup:helper', ['--action' => 'clear-logs']);
-        return redirect()->back()->with('success', __('admin.success') . "<br>" . __('backups::messages.actions_timer'));
+        return redirect()->back()->with('success', __('backups::messages.clear_logs_start'));
     }
 
     public function settings()
@@ -38,13 +38,13 @@ class BackupsController extends Controller
         Settings::put('backups::path', request('path') ?? $this->files_path);
         Settings::put('backups::save-count', request('save-count') ?? 10);
         Settings::put('backups::every-hours', request('every-hours') ?? 12);
-        return redirect()->back()->with('success', __('responses.settings_store_success'));
+        return redirect()->back()->with('success', __('backups::messages.settings_saved'));
     }
 
     public function create()
     {
         Artisan::queue('backup', ['--action' => 'create', '--type' => 'all']);
-        return redirect()->back()->with('success', __('responses.backup_create_successfully') . "<br>" . __('backups::messages.actions_timer'));
+        return redirect()->back()->with('success', __('backups::messages.create_backup_start'));
     }
 
     public function download($name)
@@ -57,7 +57,7 @@ class BackupsController extends Controller
     {
         $type = str_contains($name, '.zip') ? 'panel' : 'db';
         Artisan::queue('backup', ['--action' => 'delete-file', '--type' => $type, '--file' => $name]);
-        return redirect()->back()->with('success', __('responses.backup_delete_successfully') . "<br>" . __('backups::messages.actions_timer'));
+        return redirect()->back()->with('success', __('backups::messages.delete_backup_start'));
     }
 
     private function backupPrepare($files_path): array

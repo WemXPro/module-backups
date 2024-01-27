@@ -7,5 +7,5 @@
     "providers": [
         "Modules\\Backups\\Providers\\BackupsServiceProvider"
     ],
-    "files": []
+    "files": ["helpers.php"]
 }

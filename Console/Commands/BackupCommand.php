@@ -3,6 +3,7 @@
 namespace Modules\Backups\Console\Commands;
 
 use DirectoryIterator;
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 use RecursiveDirectoryIterator;
@@ -164,77 +165,93 @@ class BackupCommand extends Command
 
     private function createPanelBackup($name): void
     {
-        if (!file_exists($this->backup_directory)) {
-            mkdir($this->backup_directory, 0777, true);
-        }
-
-        $backup_file = $this->backup_directory . '/backup-' . $name . '.zip';
-        $panel_directory = $this->panel_directory;
-
-        $zip = new ZipArchive();
-        $zip->open($backup_file, ZipArchive::CREATE | ZipArchive::OVERWRITE);
-
-        $files = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($panel_directory),
-            RecursiveIteratorIterator::LEAVES_ONLY
-        );
-
-        $this->logInfo('Creating a panel backup...');
-        foreach ($files as $name => $file) {
-            if (!$file->isDir()) {
-                $filePath = $file->getRealPath();
-                // Check if file is in the backup directory
-                if (Str::startsWith($filePath, $this->backup_directory)) {
-                    continue;
-                }
-
-                $relativePath = substr($filePath, strlen($panel_directory) + 1);
-                $zip->addFile($filePath, $relativePath);
+        try {
+            if (!file_exists($this->backup_directory)) {
+                mkdir($this->backup_directory, 0777, true);
             }
+
+            $backup_file = $this->backup_directory . '/backup-' . $name . '.zip';
+            $panel_directory = $this->panel_directory;
+
+            $zip = new ZipArchive();
+            $zip->open($backup_file, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+            $files = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($panel_directory),
+                RecursiveIteratorIterator::LEAVES_ONLY
+            );
+
+            $this->logInfo('Creating a panel backup...');
+            foreach ($files as $name => $file) {
+                if (!$file->isDir()) {
+                    $filePath = $file->getRealPath();
+                    // Check if file is in the backup directory
+                    if (Str::startsWith($filePath, $this->backup_directory)) {
+                        continue;
+                    }
+
+                    $relativePath = substr($filePath, strlen($panel_directory) + 1);
+                    $zip->addFile($filePath, $relativePath);
+                }
+            }
+            $zip->close();
+        } catch (Exception $e) {
+            $this->logError('An error occurred while creating the panel backup: ' . $e->getMessage());
         }
-        $zip->close();
     }
 
     private function createDbBackup($name): void
     {
-        if (!file_exists($this->db_directory)) {
-            mkdir($this->db_directory, 0777, true);
+        try {
+            if (!file_exists($this->db_directory)) {
+                mkdir($this->db_directory, 0777, true);
+            }
+            $this->logInfo('Creating a database backup...');
+            $command = "mariadb-dump --user={$this->db_user} --password={$this->db_pass} --host={$this->db_host} {$this->db_name} > {$this->db_directory}/db-{$name}.sql";
+            system($command);
+        } catch (Exception $e) {
+            $this->logError('An error occurred while creating the database backup: ' . $e->getMessage());
         }
-        $this->logInfo('Creating a database backup...');
-        $command = "mariadb-dump --user={$this->db_user} --password={$this->db_pass} --host={$this->db_host} {$this->db_name} > {$this->db_directory}/db-{$name}.sql";
-        system($command);
     }
 
     private function restorePanelBackup($file): void
     {
-        $file = $this->backup_directory . '/' . $file;
-        if (file_exists($file)) {
-            $this->logInfo('Restore a panel backup...');
-            $zip = new ZipArchive;
-            if ($zip->open($file) === true) {
-                $zip->extractTo($this->panel_directory);
-                $zip->close();
-                $this->logInfo('The panel backup has been successfully restored!');
+        try {
+            $file = $this->backup_directory . '/' . $file;
+            if (file_exists($file)) {
+                $this->logInfo('Restore a panel backup...');
+                $zip = new ZipArchive;
+                if ($zip->open($file) === true) {
+                    $zip->extractTo($this->panel_directory);
+                    $zip->close();
+                    $this->logInfo('The panel backup has been successfully restored!');
+                } else {
+                    $this->logError('Failed to restore panel backup.');
+                }
             } else {
-                $this->logError('Failed to restore panel backup.');
+                $this->logError("The backup file does not exist.");
             }
-        } else {
-            $this->logError("The backup file does not exist.");
+        } catch (Exception $e) {
+            $this->logError('An error occurred while restoring the panel backup: ' . $e->getMessage());
         }
     }
 
     private function restoreDbBackup($file): void
     {
-        $file = Str::replaceFirst('backup', 'db', $file);
-        $file = $this->db_directory . '/' . $file;
-        if (!file_exists($file)) {
-            $this->logError("Database backup not found: {$file}");
-            return;
+        try {
+            $file = Str::replaceFirst('backup', 'db', $file);
+            $file = $this->db_directory . '/' . $file;
+            if (!file_exists($file)) {
+                $this->logError("Database backup not found: {$file}");
+                return;
+            }
+            $this->logInfo('Restore a database backup...');
+            $command = "mysql --user={$this->db_user} --password={$this->db_pass} --host={$this->db_host} {$this->db_name} < {$file}";
+            system($command);
+            $this->logInfo('The database backup has been successfully restored!');
+        } catch (Exception $e) {
+            $this->logError('An error occurred while restoring the database backup: ' . $e->getMessage());
         }
-        $this->logInfo('Restore a database backup...');
-        $command = "mysql --user={$this->db_user} --password={$this->db_pass} --host={$this->db_host} {$this->db_name} < {$file}";
-        system($command);
-        $this->logInfo('The database backup has been successfully restored!');
     }
 
     private function backupPrepare(DirectoryIterator $backups): array
@@ -274,37 +291,47 @@ class BackupCommand extends Command
 
     private function deleteOldFiles(DirectoryIterator $files): void
     {
-        $keepCount = settings('backups::save-count', 10);
-        $data = [];
-        foreach ($files as $fileInfo) {
-            if ($fileInfo->isFile() && !$fileInfo->isDot()) {
-                $data[] = $fileInfo->getPathname();
+        try {
+            $keepCount = settings('backups::save-count', 10);
+            $data = [];
+            foreach ($files as $fileInfo) {
+                if ($fileInfo->isFile() && !$fileInfo->isDot()) {
+                    $data[] = $fileInfo->getPathname();
+                }
             }
+            usort($data, function ($a, $b) {
+                return filemtime($b) <=> filemtime($a);
+            });
+            for ($i = $keepCount; $i < count($data); $i++) {
+                unlink($data[$i]);
+            }
+        } catch (Exception $e) {
+            $this->logError('An error occurred while deleting old files: ' . $e->getMessage());
         }
-        usort($data, function ($a, $b) {
-            return filemtime($b) <=> filemtime($a);
-        });
-        for ($i = $keepCount; $i < count($data); $i++) {
-            unlink($data[$i]);
-        }
+
     }
 
     private function deleteSingleFile($fileName, $type): void
     {
-        if (!$fileName) {
-            $this->logError('File name not provided.');
-            return;
+        try {
+            if (!$fileName) {
+                $this->logError('File name not provided.');
+                return;
+            }
+
+            $directory = $type === 'db' ? $this->db_directory : $this->backup_directory;
+            $filePath = $directory . '/' . $fileName;
+
+            if (file_exists($filePath)) {
+                unlink($filePath);
+                $this->logInfo("File {$filePath} has been deleted.");
+            } else {
+                $this->logError("File {$filePath} not found.");
+            }
+        } catch (Exception $e) {
+            $this->logError('An error occurred while deleting a single file: ' . $e->getMessage());
         }
 
-        $directory = $type === 'db' ? $this->db_directory : $this->backup_directory;
-        $filePath = $directory . '/' . $fileName;
-
-        if (file_exists($filePath)) {
-            unlink($filePath);
-            $this->logInfo("File {$filePath} has been deleted.");
-        } else {
-            $this->logError("File {$filePath} not found.");
-        }
     }
 
     private function logInfo($message): void

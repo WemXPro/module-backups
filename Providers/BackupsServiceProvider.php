@@ -5,11 +5,13 @@ namespace Modules\Backups\Providers;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\ServiceProvider;
 use Modules\Backups\Console\Commands\BackupCommand;
+use Modules\Backups\Console\Commands\HelperCommand;
 
 class BackupsServiceProvider extends ServiceProvider
 {
     protected array $commands = [
         BackupCommand::class,
+        HelperCommand::class
     ];
     protected string $moduleName = 'Backups';
     protected string $moduleNameLower = 'backups';

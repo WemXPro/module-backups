@@ -16,22 +16,21 @@ class BackupsController extends Controller
     {
         $this->files_path = settings('backups::path', dirname(base_path()) . '/backups/wemx');
         $this->db_path = $this->files_path . '/db';
-        if(file_exists($this->files_path) === false) mkdir($this->files_path, 0777, true);
-        if(file_exists($this->db_path) === false) mkdir($this->db_path, 0777, true);
+        if(file_exists($this->files_path) === false) Artisan::queue('backup:helper', ['--action' => 'make-dirs']);
     }
 
     public function index()
     {
-        $files_backups = $this->backupPrepare(new DirectoryIterator($this->files_path));
-        $db_backups = $this->backupPrepare(new DirectoryIterator($this->db_path));
-        $logs = $this->getLastLines(storage_path('logs/backups.log'), 50);
+        $files_backups = $this->backupPrepare($this->files_path);
+        $db_backups = $this->backupPrepare($this->db_path);
+        $logs = $this->getLastLines(storage_path('logs/backups.log'), 100);
         return view(AdminTheme::serviceView('backups', 'index'), compact('files_backups', 'db_backups', 'logs'));
     }
 
     public function clearLogs()
     {
-        file_put_contents(storage_path('logs/backups.log'), '');
-        return redirect()->back()->with('success', __('admin.success'));
+        Artisan::queue('backup:helper', ['--action' => 'clear-logs']);
+        return redirect()->back()->with('success', __('admin.success') . "<br>" . __('backups::messages.actions_timer'));
     }
 
     public function settings()
@@ -45,7 +44,7 @@ class BackupsController extends Controller
     public function create()
     {
         Artisan::queue('backup', ['--action' => 'create', '--type' => 'all']);
-        return redirect()->back()->with('success', __('responses.backup_create_successfully'));
+        return redirect()->back()->with('success', __('responses.backup_create_successfully') . "<br>" . __('backups::messages.actions_timer'));
     }
 
     public function download($name)
@@ -58,35 +57,40 @@ class BackupsController extends Controller
     {
         $type = str_contains($name, '.zip') ? 'panel' : 'db';
         Artisan::queue('backup', ['--action' => 'delete-file', '--type' => $type, '--file' => $name]);
-        return redirect()->back()->with('success', __('responses.backup_delete_successfully'));
+        return redirect()->back()->with('success', __('responses.backup_delete_successfully') . "<br>" . __('backups::messages.actions_timer'));
     }
 
-    private function backupPrepare(DirectoryIterator $backups): array
+    private function backupPrepare($files_path): array
     {
         $data = [];
         $totalSize = 0;
-        foreach ($backups as $fileInfo) {
-            if (!$fileInfo->isDot() && $fileInfo->isFile()) {
-                $data[] = [
-                    'name' => $fileInfo->getFilename(),
-                    'size' => $fileInfo->getSize(),
-                    'path' => $fileInfo->getPath(),
-                    'real_path' => $fileInfo->getRealPath(),
-                    'extension' => $fileInfo->getExtension(),
-                    'type' => $fileInfo->getType(),
-                    'date' => now()->parse($fileInfo->getMTime())->diffForHumans(),
-                    'date_raw' => $fileInfo->getMTime(),
-                ];
-                $totalSize += $fileInfo->getSize();
+        try {
+            $backups = new DirectoryIterator($files_path);
+            foreach ($backups as $fileInfo) {
+                if (!$fileInfo->isDot() && $fileInfo->isFile()) {
+                    $data[] = [
+                        'name' => $fileInfo->getFilename(),
+                        'size' => $fileInfo->getSize(),
+                        'path' => $fileInfo->getPath(),
+                        'real_path' => $fileInfo->getRealPath(),
+                        'extension' => $fileInfo->getExtension(),
+                        'type' => $fileInfo->getType(),
+                        'date' => now()->parse($fileInfo->getMTime())->diffForHumans(),
+                        'date_raw' => $fileInfo->getMTime(),
+                    ];
+                    $totalSize += $fileInfo->getSize();
+                }
             }
+            usort($data, function ($a, $b) {
+                return $b['date_raw'] <=> $a['date_raw'];
+            });
+            return [
+                'files' => $data,
+                'total_size' => $totalSize
+            ];
+        } catch (\Exception $e) {
+            return ['files' => $data, 'total_size' => $totalSize];
         }
-        usort($data, function ($a, $b) {
-            return $b['date_raw'] <=> $a['date_raw'];
-        });
-        return [
-            'files' => $data,
-            'total_size' => $totalSize
-        ];
     }
 
     private function getLastLines($filePath, $lines = 10): string

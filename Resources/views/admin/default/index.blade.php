@@ -144,6 +144,20 @@
         </div>
     </div>
 
+    <style>
+        .modal-logs {
+            height: 75vh;
+            overflow-y: scroll !important;
+            padding-right: 0 !important;
+        }
+        pre {
+            white-space: pre-wrap;       /* css-3 */
+            white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+            white-space: -o-pre-wrap;    /* Opera 7 */
+            word-wrap: break-word;       /* Internet Explorer 5.5+ */
+        }
+    </style>
+
     {{--  Logs modal  --}}
     <div class="modal fade" id="logsModal" tabindex="-1" role="dialog" aria-labelledby="logsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
@@ -155,12 +169,12 @@
                     </button>
                 </div>
 
-                    <div class="modal-body">
-                        <pre class="text-success">{{ $logs }}</pre>
-                    </div>
+                <div class="modal-body modal-logs">
+                    <pre class="text-success">{{ $logs }}</pre>
+                </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">{!! __('admin.close') !!}</button>
-{{--                    <a href="{{ route('admin.backups.logs-clear') }}" class="btn btn-warning">{!! __('admin.clear_all') !!}</a>--}}
+                    <a href="{{ route('admin.backups.logs-clear') }}" class="btn btn-warning">{!! __('admin.clear_all') !!}</a>
                 </div>
 
             </div>

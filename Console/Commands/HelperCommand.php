@@ -73,6 +73,7 @@ class HelperCommand extends Command
 
         try {
             $bc_file_name = Str::replaceFirst('db', 'backup', $bc_file_name);
+            $bc_file_name = Str::replaceFirst('sql', 'zip', $bc_file_name);
             $bc_file_path = $this->files_path . '/' . $bc_file_name;
             if (!file_exists($bc_file_path)) {
                 $this->logError("Panel backup not found: {$bc_file_path}");
@@ -101,6 +102,7 @@ class HelperCommand extends Command
 
         try {
             $bc_file_name = Str::replaceFirst('backup', 'db', $bc_file_name);
+            $bc_file_name = Str::replaceFirst('zip', 'sql', $bc_file_name);
             $bc_file_name = $this->db_path . '/' . $bc_file_name;
             if (!file_exists($bc_file_name)) {
                 $this->logError("Database backup not found: {$bc_file_name}");

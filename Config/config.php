@@ -5,7 +5,7 @@ return [
     'name' => 'Backups',
     'icon' => 'https://imgur.png',
     'author' => 'GIGABAIT',
-    'version' => '1.0.3',
+    'version' => '1.0.4',
     'wemx_version' => '1.9.1',
 
     'elements' => [

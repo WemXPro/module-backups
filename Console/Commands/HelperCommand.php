@@ -2,6 +2,7 @@
 
 namespace Modules\Backups\Console\Commands;
 
+use App\Models\Settings;
 use DirectoryIterator;
 use Exception;
 use Illuminate\Console\Command;
@@ -25,7 +26,7 @@ class HelperCommand extends Command
     public function __construct()
     {
         parent::__construct();
-        $this->files_path = settings('backups::path', dirname(base_path()) . '/backups/wemx');
+        $this->files_path = Settings::get('backups::path', dirname(base_path()) . '/backups/wemx');
         $this->db_path = $this->files_path . '/db';
     }
 

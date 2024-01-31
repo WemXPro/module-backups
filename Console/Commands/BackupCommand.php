@@ -2,6 +2,7 @@
 
 namespace Modules\Backups\Console\Commands;
 
+use App\Models\Settings;
 use DirectoryIterator;
 use Exception;
 use Illuminate\Console\Command;
@@ -36,7 +37,8 @@ class BackupCommand extends Command
     public function handle(): void
     {
         $this->panel_directory = base_path();
-        $this->backup_directory = settings('backups::path', dirname(base_path()) . '/backups/wemx');
+
+        $this->backup_directory = Settings::get('backups::path', dirname(base_path()) . '/backups/wemx');
         $this->db_directory = $this->backup_directory . '/db';
 
         $this->db_user = config('database.connections.mysql.username');
@@ -276,7 +278,7 @@ class BackupCommand extends Command
 
     private function deleteOldBackups(): void
     {
-        if (settings('backups::auto-remove', true)){
+        if (Settings::get('backups::auto-remove', true)){
             $this->logInfo('Deleting old backups...');
 
             $panelBackups = new DirectoryIterator($this->backup_directory);
@@ -292,7 +294,7 @@ class BackupCommand extends Command
     private function deleteOldFiles(DirectoryIterator $files): void
     {
         try {
-            $keepCount = settings('backups::save-count', 10);
+            $keepCount = Settings::get('backups::save-count', 10);
             $data = [];
             foreach ($files as $fileInfo) {
                 if ($fileInfo->isFile() && !$fileInfo->isDot()) {

@@ -49,7 +49,7 @@ class BackupsController extends Controller
 
     public function download($name)
     {
-        $path = str_contains($name, '.zip') ? $this->files_path : $this->db_path;
+        $path = str_contains($name, '.zip') ? $this->files_path . '/' . $name : $this->db_path . '/' . $name;
         return response()->download($path);
     }
 

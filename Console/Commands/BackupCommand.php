@@ -154,7 +154,7 @@ class BackupCommand extends Command
 
         $preparedBackups = $this->backupPrepare($backups);
 
-        if (count($preparedBackups) <= 0){
+        if (count($preparedBackups) <= 0) {
             $this->logInfo("No backups available.");
             return;
         }
@@ -208,12 +208,38 @@ class BackupCommand extends Command
             if (!file_exists($this->db_directory)) {
                 mkdir($this->db_directory, 0777, true);
             }
+
             $this->logInfo('Creating a database backup...');
-            $command = "mariadb-dump --user={$this->db_user} --password={$this->db_pass} --host={$this->db_host} {$this->db_name} > {$this->db_directory}/db-{$name}.sql";
+
+            // Визначення наявності команд
+            $command = $this->getDumpCommand();
+            if (!$command) {
+                throw new Exception('Neither mariadb-dump nor mysqldump is available on the server.');
+            }
+
+            // Формування та виконання команди для резервного копіювання
+            $backupFile = "{$this->db_directory}/db-{$name}.sql";
+            $command .= " --user={$this->db_user} --password={$this->db_pass} --host={$this->db_host} {$this->db_name} > {$backupFile}";
             system($command);
+
         } catch (Exception $e) {
             $this->logError('An error occurred while creating the database backup: ' . $e->getMessage());
         }
+    }
+
+    private function getDumpCommand(): ?string
+    {
+        // Checking for availability of mariadb-dump
+        if (shell_exec('which mariadb-dump')) {
+            return 'mariadb-dump';
+        }
+
+        // Checking for mysqldump
+        if (shell_exec('which mysqldump')) {
+            return 'mysqldump';
+        }
+        // If none of the commands are found
+        return null;
     }
 
     private function restorePanelBackup($file): void
@@ -278,7 +304,7 @@ class BackupCommand extends Command
 
     private function deleteOldBackups(): void
     {
-        if (Settings::get('backups::auto-remove', true)){
+        if (Settings::get('backups::auto-remove', true)) {
             $this->logInfo('Deleting old backups...');
 
             $panelBackups = new DirectoryIterator($this->backup_directory);

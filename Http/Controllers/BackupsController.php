@@ -23,6 +23,9 @@ class BackupsController extends Controller
     {
         $files_backups = $this->backupPrepare($this->files_path);
         $db_backups = $this->backupPrepare($this->db_path);
+        if (!file_exists(storage_path('logs/backups.log'))) {
+            file_put_contents(storage_path('logs/backups.log'), '');
+        }
         $logs = $this->getLastLines(storage_path('logs/backups.log'), 100);
         return view(AdminTheme::serviceView('backups', 'index'), compact('files_backups', 'db_backups', 'logs'));
     }

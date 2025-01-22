@@ -3,7 +3,6 @@
 namespace Modules\Backups\Console\Commands;
 
 use App\Models\Settings;
-use DirectoryIterator;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;

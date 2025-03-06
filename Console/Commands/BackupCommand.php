@@ -197,6 +197,8 @@ class BackupCommand extends Command
                 }
             }
             $zip->close();
+            // Event dispatch after successful panel backup
+            event(new \Modules\Backups\Events\BackupCreated('panel', $name));
         } catch (Exception $e) {
             $this->logError('An error occurred while creating the panel backup: ' . $e->getMessage());
         }
@@ -221,6 +223,8 @@ class BackupCommand extends Command
             $backupFile = "{$this->db_directory}/db-{$name}.sql";
             $command .= " --user={$this->db_user} --password={$this->db_pass} --host={$this->db_host} {$this->db_name} > {$backupFile}";
             system($command);
+            // Event dispatch after successful database backup
+            event(new \Modules\Backups\Events\BackupCreated('db', $name));
 
         } catch (Exception $e) {
             $this->logError('An error occurred while creating the database backup: ' . $e->getMessage());
@@ -253,6 +257,8 @@ class BackupCommand extends Command
                     $zip->extractTo($this->panel_directory);
                     $zip->close();
                     $this->logInfo('The panel backup has been successfully restored!');
+                    // Event dispatch after successful panel restore
+                    event(new \Modules\Backups\Events\BackupRestored('panel', $file));
                 } else {
                     $this->logError('Failed to restore panel backup.');
                 }
@@ -277,6 +283,8 @@ class BackupCommand extends Command
             $command = "mysql --user={$this->db_user} --password={$this->db_pass} --host={$this->db_host} {$this->db_name} < {$file}";
             system($command);
             $this->logInfo('The database backup has been successfully restored!');
+            // Event dispatch after successful database restore
+            event(new \Modules\Backups\Events\BackupRestored('db', $file));
         } catch (Exception $e) {
             $this->logError('An error occurred while restoring the database backup: ' . $e->getMessage());
         }
